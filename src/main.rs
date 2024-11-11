@@ -1,7 +1,10 @@
 use std::io::{self, Read};
-
-mod cpu;
-mod opcodes;
+#[macro_use]
+extern crate bitflags;
+#[macro_use]
+extern crate lazy_static;
+pub mod cpu;
+pub mod opcodes;
 fn main() {
     let mut counter = 0;
     let mut buffer: [u8; 100] = [0; 100];
