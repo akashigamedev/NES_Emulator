@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::opcodes;
+use crate::{bus::Bus, opcodes};
 
 bitflags! {
 
@@ -41,7 +41,7 @@ pub struct CPU {
     pub status: CpuFlags,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    pub memory: [u8; 0xFFFF],
+    pub bus: Bus,
 }
 
 pub trait Mem {
@@ -65,11 +65,19 @@ pub trait Mem {
 
 impl Mem for CPU {
     fn mem_read(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
+        self.bus.mem_read(addr)
     }
 
     fn mem_write(&mut self, addr: u16, data: u8) {
-        self.memory[addr as usize] = data;
+        self.bus.mem_write(addr, data);
+    }
+
+    fn mem_read_u16(&self, pos: u16) -> u16 {
+        self.bus.mem_read_u16(pos)
+    }
+
+    fn mem_write_u16(&mut self, pos: u16, data: u16) {
+        self.bus.mem_write_u16(pos, data);
     }
 }
 
@@ -82,7 +90,7 @@ impl CPU {
             stack_pointer: STACK_RESET,
             program_counter: 0,
             status: CpuFlags::from_bits_truncate(0b100100),
-            memory: [0; 0xFFFF],
+            bus: Bus::new(),
         }
     }
 
@@ -220,8 +228,11 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x600..(0x600 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC, 0x600);
+        for i in 0..(program.len() as u16) {
+            self.mem_write(0x0600 + i, program[i as usize]);
+        }
+        self.mem_write_u16(0xFFFC, 0x0600);
+    }
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -779,7 +790,7 @@ impl CPU {
                 }
                 // LDY
                 0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => {
-                   self.ldy(&opcode.mode);
+                    self.ldy(&opcode.mode);
                 }
 
                 // TAY
@@ -799,7 +810,7 @@ impl CPU {
                     self.register_a = self.register_x;
                     self.update_zero_and_negative_flags(self.register_a);
                 }
-                
+
                 // TXS
                 0x9a => {
                     self.stack_pointer = self.register_x;
