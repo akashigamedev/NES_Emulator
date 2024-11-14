@@ -233,7 +233,6 @@ impl CPU {
         }
         self.mem_write_u16(0xFFFC, 0x0600);
     }
-    }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
